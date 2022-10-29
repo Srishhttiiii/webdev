@@ -22,7 +22,7 @@
       {% endif %}
       <div class="row mb-4" id="newProj" >
         <a href="{% url 'recAdd' %}">
-            <button type="button" class="btn btn-outline-primary" style="margin:60px;" >New Rec</button>
+            <button type="button" class="btn btn-danger" style="margin:60px;" >New Rec</button>
         </a>
       </div>
 
@@ -30,7 +30,7 @@
         {% for i in rec %}
         <div class="u-align-center u-container-style u-list-item u-radius-15 u-repeater-item u-shape-round u-white u-list-item-1">
           <div class="u-container-layout u-similar-container u-container-layout-1">
-            <img src="{% static 'images/about-time.png' %}" style="height: 0px; border-radius: 80%;"></span>
+            </span>
             <h5 class="u-custom-font u-font-raleway u-text u-text-default u-text-palette-2-base u-text-1">{{i.choices}}</h5>
             <p class="u-text u-text-palette-2-dark-2 u-text-2">{{i.name}}</p>
             <p class="u-text u-text-palette-2-dark-2 u-text-2">{{i.description}}</p>
@@ -41,6 +41,8 @@
               <button class="btn btn-warning">Update</button></a>
             <a href="{% url 'recDelete' i.id %}">
                 <button class="btn btn-danger">Delete</button></a></br>
+
+            <img src="{% static 'images/about-time.png' %}" style="height: 0px; border-radius: 80%;">
           </div>
         </div>
         {% endfor %}
