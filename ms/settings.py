@@ -41,10 +41,13 @@ DEFAULT_APPS = [
 ]
 
 MY_APPS = [
-    'home.apps.HomeConfig'
+    'home.apps.HomeConfig',
+    'authenticate.apps.AuthenticateConfig',
 ]
 
-THIRD_PARTY_APPS = []
+THIRD_PARTY_APPS = [
+    'widget_tweaks',
+]
 
 INSTALLED_APPS = DEFAULT_APPS + MY_APPS + THIRD_PARTY_APPS
 
