@@ -1,4 +1,5 @@
 import email
+from email.policy import default
 from django.db import models
 
 # Create your models here.
@@ -37,6 +38,26 @@ class Meditation(models.Model):
     class Meta:
          verbose_name_plural = "Meditation"
 
+class Rec(models.Model):
+    recChoices = [
+      ('song', 'song'),
+      ('movie', 'movie'),
+      ('tvShow', 'tvShow'),
+      ('podcast', 'podcast'),
+      ('book', 'book'),
+   ]
+    choices = models.CharField(choices=recChoices,null=True,blank=True,max_length=10)
+    name = models.CharField(max_length=100)
+    description = models.CharField(max_length=100)
+    genre = models.CharField(max_length=100 , default= '')
+    link = models.CharField(max_length=100)
+    
+    def __str__(self):
+         return self.name + ' ' + self.link
+
+    class Meta:
+         verbose_name_plural = "Recommendations"
+
 
 class Profile(models.Model):
     username = models.CharField(max_length=100)
@@ -47,7 +68,7 @@ class Profile(models.Model):
 
     
     class Meta:
-        verbose_name_plural = "Login"
+        verbose_name_plural = "Profile"
 
 
 class Journaling(models.Model):
@@ -61,7 +82,7 @@ class Journaling(models.Model):
         return self.cmpname + ' ' + self.position
     
     class Meta:
-        verbose_name_plural = "Work Exp"
+        verbose_name_plural = "Journaling"
 
 
 # class Timetable(models.Model):

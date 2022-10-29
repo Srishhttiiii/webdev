@@ -1,381 +1,256 @@
-jQuery(document).ready(function($){
-	var transitionEnd = 'webkitTransitionEnd otransitionend oTransitionEnd msTransitionEnd transitionend';
-	var transitionsSupported = ( $('.csstransitions').length > 0 );
-	//if browser does not support transitions - use a different event to trigger them
-	if( !transitionsSupported ) transitionEnd = 'noTransition';
-	
-	//should add a loding while the events are organized 
+//global variables
+var monthEl = $(".c-main");
+var dataCel = $(".c-cal__cel");
+var dateObj = new Date();
+var month = dateObj.getUTCMonth() + 1;
+var day = dateObj.getUTCDate();
+var year = dateObj.getUTCFullYear();
+var monthText = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December"
+];
+var indexMonth = month;
+var todayBtn = $(".c-today__btn");
+var addBtn = $(".js-event__add");
+var saveBtn = $(".js-event__save");
+var closeBtn = $(".js-event__close");
+var winCreator = $(".js-event__creator");
+var inputDate = $(this).data();
+today = year + "-" + month + "-" + day;
 
-	function SchedulePlan( element ) {
-		this.element = element;
-		this.timeline = this.element.find('.timeline');
-		this.timelineItems = this.timeline.find('li');
-		this.timelineItemsNumber = this.timelineItems.length;
-		this.timelineStart = getScheduleTimestamp(this.timelineItems.eq(0).text());
-		//need to store delta (in our case half hour) timestamp
-		this.timelineUnitDuration = getScheduleTimestamp(this.timelineItems.eq(1).text()) - getScheduleTimestamp(this.timelineItems.eq(0).text());
 
-		this.eventsWrapper = this.element.find('.events');
-		this.eventsGroup = this.eventsWrapper.find('.events-group');
-		this.singleEvents = this.eventsGroup.find('.single-event');
-		this.eventSlotHeight = this.eventsGroup.eq(0).children('.top-info').outerHeight();
+// ------ set default events -------
+function defaultEvents(dataDay,dataName,dataNotes,classTag){
+  var date = $('*[data-day='+dataDay+']');
+  date.attr("data-name", dataName);
+  date.attr("data-notes", dataNotes);
+  date.addClass("event");
+  date.addClass("event--" + classTag);
+}
 
-		this.modal = this.element.find('.event-modal');
-		this.modalHeader = this.modal.find('.header');
-		this.modalHeaderBg = this.modal.find('.header-bg');
-		this.modalBody = this.modal.find('.body'); 
-		this.modalBodyBg = this.modal.find('.body-bg'); 
-		this.modalMaxWidth = 800;
-		this.modalMaxHeight = 480;
+defaultEvents(today, 'YEAH!','Today is your day','important');
+defaultEvents('2022-12-25', 'MERRY CHRISTMAS','A lot of gift!!!!','festivity');
+defaultEvents('2022-05-04', "LUCA'S BIRTHDAY",'Another gifts...?','birthday');
+defaultEvents('2022-03-03', "MY LADY'S BIRTHDAY",'A lot of money to spent!!!!','birthday');
 
-		this.animating = false;
 
-		this.initSchedule();
-	}
+// ------ functions control -------
 
-	SchedulePlan.prototype.initSchedule = function() {
-		this.scheduleReset();
-		this.initEvents();
-	};
-
-	SchedulePlan.prototype.scheduleReset = function() {
-		var mq = this.mq();
-		if( mq == 'desktop' && !this.element.hasClass('js-full') ) {
-			//in this case you are on a desktop version (first load or resize from mobile)
-			this.eventSlotHeight = this.eventsGroup.eq(0).children('.top-info').outerHeight();
-			this.element.addClass('js-full');
-			this.placeEvents();
-			this.element.hasClass('modal-is-open') && this.checkEventModal();
-		} else if(  mq == 'mobile' && this.element.hasClass('js-full') ) {
-			//in this case you are on a mobile version (first load or resize from desktop)
-			this.element.removeClass('js-full loading');
-			this.eventsGroup.children('ul').add(this.singleEvents).removeAttr('style');
-			this.eventsWrapper.children('.grid-line').remove();
-			this.element.hasClass('modal-is-open') && this.checkEventModal();
-		} else if( mq == 'desktop' && this.element.hasClass('modal-is-open')){
-			//on a mobile version with modal open - need to resize/move modal window
-			this.checkEventModal('desktop');
-			this.element.removeClass('loading');
-		} else {
-			this.element.removeClass('loading');
-		}
-	};
-
-	SchedulePlan.prototype.initEvents = function() {
-		var self = this;
-
-		this.singleEvents.each(function(){
-			//create the .event-date element for each event
-			var durationLabel = '<span class="event-date">'+$(this).data('start')+' - '+$(this).data('end')+'</span>';
-			$(this).children('a').prepend($(durationLabel));
-
-			//detect click on the event and open the modal
-			$(this).on('click', 'a', function(event){
-				event.preventDefault();
-				if( !self.animating ) self.openModal($(this));
-			});
-		});
-
-		//close modal window
-		this.modal.on('click', '.close', function(event){
-			event.preventDefault();
-			if( !self.animating ) self.closeModal(self.eventsGroup.find('.selected-event'));
-		});
-		this.element.on('click', '.cover-layer', function(event){
-			if( !self.animating && self.element.hasClass('modal-is-open') ) self.closeModal(self.eventsGroup.find('.selected-event'));
-		});
-	};
-
-	SchedulePlan.prototype.placeEvents = function() {
-		var self = this;
-		this.singleEvents.each(function(){
-			//place each event in the grid -> need to set top position and height
-			var start = getScheduleTimestamp($(this).attr('data-start')),
-				duration = getScheduleTimestamp($(this).attr('data-end')) - start;
-
-			var eventTop = self.eventSlotHeight*(start - self.timelineStart)/self.timelineUnitDuration,
-				eventHeight = self.eventSlotHeight*duration/self.timelineUnitDuration;
-			
-			$(this).css({
-				top: (eventTop -1) +'px',
-				height: (eventHeight+1)+'px'
-			});
-		});
-
-		this.element.removeClass('loading');
-	};
-
-	SchedulePlan.prototype.openModal = function(event) {
-		var self = this;
-		var mq = self.mq();
-		this.animating = true;
-
-		//update event name and time
-		this.modalHeader.find('.event-name').text(event.find('.event-name').text());
-		this.modalHeader.find('.event-date').text(event.find('.event-date').text());
-		this.modal.attr('data-event', event.parent().attr('data-event'));
-
-		//update event content
-		this.modalBody.find('.event-info').load(event.parent().attr('data-content')+'.html .event-info > *', function(data){
-			//once the event content has been loaded
-			self.element.addClass('content-loaded');
-		});
-
-		this.element.addClass('modal-is-open');
-
-		setTimeout(function(){
-			//fixes a flash when an event is selected - desktop version only
-			event.parent('li').addClass('selected-event');
-		}, 10);
-
-		if( mq == 'mobile' ) {
-			self.modal.one(transitionEnd, function(){
-				self.modal.off(transitionEnd);
-				self.animating = false;
-			});
-		} else {
-			var eventTop = event.offset().top - $(window).scrollTop(),
-				eventLeft = event.offset().left,
-				eventHeight = event.innerHeight(),
-				eventWidth = event.innerWidth();
-
-			var windowWidth = $(window).width(),
-				windowHeight = $(window).height();
-
-			var modalWidth = ( windowWidth*.8 > self.modalMaxWidth ) ? self.modalMaxWidth : windowWidth*.8,
-				modalHeight = ( windowHeight*.8 > self.modalMaxHeight ) ? self.modalMaxHeight : windowHeight*.8;
-
-			var modalTranslateX = parseInt((windowWidth - modalWidth)/2 - eventLeft),
-				modalTranslateY = parseInt((windowHeight - modalHeight)/2 - eventTop);
-			
-			var HeaderBgScaleY = modalHeight/eventHeight,
-				BodyBgScaleX = (modalWidth - eventWidth);
-
-			//change modal height/width and translate it
-			self.modal.css({
-				top: eventTop+'px',
-				left: eventLeft+'px',
-				height: modalHeight+'px',
-				width: modalWidth+'px',
-			});
-			transformElement(self.modal, 'translateY('+modalTranslateY+'px) translateX('+modalTranslateX+'px)');
-
-			//set modalHeader width
-			self.modalHeader.css({
-				width: eventWidth+'px',
-			});
-			//set modalBody left margin
-			self.modalBody.css({
-				marginLeft: eventWidth+'px',
-			});
-
-			//change modalBodyBg height/width ans scale it
-			self.modalBodyBg.css({
-				height: eventHeight+'px',
-				width: '1px',
-			});
-			transformElement(self.modalBodyBg, 'scaleY('+HeaderBgScaleY+') scaleX('+BodyBgScaleX+')');
-
-			//change modal modalHeaderBg height/width and scale it
-			self.modalHeaderBg.css({
-				height: eventHeight+'px',
-				width: eventWidth+'px',
-			});
-			transformElement(self.modalHeaderBg, 'scaleY('+HeaderBgScaleY+')');
-			
-			self.modalHeaderBg.one(transitionEnd, function(){
-				//wait for the  end of the modalHeaderBg transformation and show the modal content
-				self.modalHeaderBg.off(transitionEnd);
-				self.animating = false;
-				self.element.addClass('animation-completed');
-			});
-		}
-
-		//if browser do not support transitions -> no need to wait for the end of it
-		if( !transitionsSupported ) self.modal.add(self.modalHeaderBg).trigger(transitionEnd);
-	};
-
-	SchedulePlan.prototype.closeModal = function(event) {
-		var self = this;
-		var mq = self.mq();
-
-		this.animating = true;
-
-		if( mq == 'mobile' ) {
-			this.element.removeClass('modal-is-open');
-			this.modal.one(transitionEnd, function(){
-				self.modal.off(transitionEnd);
-				self.animating = false;
-				self.element.removeClass('content-loaded');
-				event.removeClass('selected-event');
-			});
-		} else {
-			var eventTop = event.offset().top - $(window).scrollTop(),
-				eventLeft = event.offset().left,
-				eventHeight = event.innerHeight(),
-				eventWidth = event.innerWidth();
-
-			var modalTop = Number(self.modal.css('top').replace('px', '')),
-				modalLeft = Number(self.modal.css('left').replace('px', ''));
-
-			var modalTranslateX = eventLeft - modalLeft,
-				modalTranslateY = eventTop - modalTop;
-
-			self.element.removeClass('animation-completed modal-is-open');
-
-			//change modal width/height and translate it
-			this.modal.css({
-				width: eventWidth+'px',
-				height: eventHeight+'px'
-			});
-			transformElement(self.modal, 'translateX('+modalTranslateX+'px) translateY('+modalTranslateY+'px)');
-			
-			//scale down modalBodyBg element
-			transformElement(self.modalBodyBg, 'scaleX(0) scaleY(1)');
-			//scale down modalHeaderBg element
-			transformElement(self.modalHeaderBg, 'scaleY(1)');
-
-			this.modalHeaderBg.one(transitionEnd, function(){
-				//wait for the  end of the modalHeaderBg transformation and reset modal style
-				self.modalHeaderBg.off(transitionEnd);
-				self.modal.addClass('no-transition');
-				setTimeout(function(){
-					self.modal.add(self.modalHeader).add(self.modalBody).add(self.modalHeaderBg).add(self.modalBodyBg).attr('style', '');
-				}, 10);
-				setTimeout(function(){
-					self.modal.removeClass('no-transition');
-				}, 20);
-
-				self.animating = false;
-				self.element.removeClass('content-loaded');
-				event.removeClass('selected-event');
-			});
-		}
-
-		//browser do not support transitions -> no need to wait for the end of it
-		if( !transitionsSupported ) self.modal.add(self.modalHeaderBg).trigger(transitionEnd);
-	}
-
-	SchedulePlan.prototype.mq = function(){
-		//get MQ value ('desktop' or 'mobile') 
-		var self = this;
-		return window.getComputedStyle(this.element.get(0), '::before').getPropertyValue('content').replace(/["']/g, '');
-	};
-
-	SchedulePlan.prototype.checkEventModal = function(device) {
-		this.animating = true;
-		var self = this;
-		var mq = this.mq();
-
-		if( mq == 'mobile' ) {
-			//reset modal style on mobile
-			self.modal.add(self.modalHeader).add(self.modalHeaderBg).add(self.modalBody).add(self.modalBodyBg).attr('style', '');
-			self.modal.removeClass('no-transition');	
-			self.animating = false;	
-		} else if( mq == 'desktop' && self.element.hasClass('modal-is-open') ) {
-			self.modal.addClass('no-transition');
-			self.element.addClass('animation-completed');
-			var event = self.eventsGroup.find('.selected-event');
-
-			var eventTop = event.offset().top - $(window).scrollTop(),
-				eventLeft = event.offset().left,
-				eventHeight = event.innerHeight(),
-				eventWidth = event.innerWidth();
-
-			var windowWidth = $(window).width(),
-				windowHeight = $(window).height();
-
-			var modalWidth = ( windowWidth*.8 > self.modalMaxWidth ) ? self.modalMaxWidth : windowWidth*.8,
-				modalHeight = ( windowHeight*.8 > self.modalMaxHeight ) ? self.modalMaxHeight : windowHeight*.8;
-
-			var HeaderBgScaleY = modalHeight/eventHeight,
-				BodyBgScaleX = (modalWidth - eventWidth);
-
-			setTimeout(function(){
-				self.modal.css({
-					width: modalWidth+'px',
-					height: modalHeight+'px',
-					top: (windowHeight/2 - modalHeight/2)+'px',
-					left: (windowWidth/2 - modalWidth/2)+'px',
-				});
-				transformElement(self.modal, 'translateY(0) translateX(0)');
-				//change modal modalBodyBg height/width
-				self.modalBodyBg.css({
-					height: modalHeight+'px',
-					width: '1px',
-				});
-				transformElement(self.modalBodyBg, 'scaleX('+BodyBgScaleX+')');
-				//set modalHeader width
-				self.modalHeader.css({
-					width: eventWidth+'px',
-				});
-				//set modalBody left margin
-				self.modalBody.css({
-					marginLeft: eventWidth+'px',
-				});
-				//change modal modalHeaderBg height/width and scale it
-				self.modalHeaderBg.css({
-					height: eventHeight+'px',
-					width: eventWidth+'px',
-				});
-				transformElement(self.modalHeaderBg, 'scaleY('+HeaderBgScaleY+')');
-			}, 10);
-
-			setTimeout(function(){
-				self.modal.removeClass('no-transition');
-				self.animating = false;	
-			}, 20);
-		}
-	};
-
-	var schedules = $('.cd-schedule');
-	var objSchedulesPlan = [],
-		windowResize = false;
-	
-	if( schedules.length > 0 ) {
-		schedules.each(function(){
-			//create SchedulePlan objects
-			objSchedulesPlan.push(new SchedulePlan($(this)));
-		});
-	}
-
-	$(window).on('resize', function(){
-		if( !windowResize ) {
-			windowResize = true;
-			(!window.requestAnimationFrame) ? setTimeout(checkResize) : window.requestAnimationFrame(checkResize);
-		}
-	});
-
-	$(window).keyup(function(event) {
-		if (event.keyCode == 27) {
-			objSchedulesPlan.forEach(function(element){
-				element.closeModal(element.eventsGroup.find('.selected-event'));
-			});
-		}
-	});
-
-	function checkResize(){
-		objSchedulesPlan.forEach(function(element){
-			element.scheduleReset();
-		});
-		windowResize = false;
-	}
-
-	function getScheduleTimestamp(time) {
-		//accepts hh:mm format - convert hh:mm to timestamp
-		time = time.replace(/ /g,'');
-		var timeArray = time.split(':');
-		var timeStamp = parseInt(timeArray[0])*60 + parseInt(timeArray[1]);
-		return timeStamp;
-	}
-
-	function transformElement(element, value) {
-		element.css({
-		    '-moz-transform': value,
-		    '-webkit-transform': value,
-			'-ms-transform': value,
-			'-o-transform': value,
-			'transform': value
-		});
-	}
+//button of the current day
+todayBtn.on("click", function() {
+  if (month < indexMonth) {
+    var step = indexMonth % month;
+    movePrev(step, true);
+  } else if (month > indexMonth) {
+    var step = month - indexMonth;
+    moveNext(step, true);
+  }
 });
+
+//higlight the cel of current day
+dataCel.each(function() {
+  if ($(this).data("day") === today) {
+    $(this).addClass("isToday");
+    fillEventSidebar($(this));
+  }
+});
+
+//window event creator
+addBtn.on("click", function() {
+  winCreator.addClass("isVisible");
+  $("body").addClass("overlay");
+  dataCel.each(function() {
+    if ($(this).hasClass("isSelected")) {
+      today = $(this).data("day");
+      document.querySelector('input[type="date"]').value = today;
+    } else {
+      document.querySelector('input[type="date"]').value = today;
+    }
+  });
+});
+closeBtn.on("click", function() {
+  winCreator.removeClass("isVisible");
+  $("body").removeClass("overlay");
+});
+saveBtn.on("click", function() {
+  var inputName = $("input[name=name]").val();
+  var inputDate = $("input[name=date]").val();
+  var inputNotes = $("textarea[name=notes]").val();
+  var inputTag = $("select[name=tags]")
+    .find(":selected")
+    .text();
+
+  dataCel.each(function() {
+    if ($(this).data("day") === inputDate) {
+      if (inputName != null) {
+        $(this).attr("data-name", inputName);
+      }
+      if (inputNotes != null) {
+        $(this).attr("data-notes", inputNotes);
+      }
+      $(this).addClass("event");
+      if (inputTag != null) {
+        $(this).addClass("event--" + inputTag);
+      }
+      fillEventSidebar($(this));
+    }
+  });
+
+  winCreator.removeClass("isVisible");
+  $("body").removeClass("overlay");
+  $("#addEvent")[0].reset();
+});
+
+//fill sidebar event info
+function fillEventSidebar(self) {
+  $(".c-aside__event").remove();
+  var thisName = self.attr("data-name");
+  var thisNotes = self.attr("data-notes");
+  var thisImportant = self.hasClass("event--important");
+  var thisBirthday = self.hasClass("event--birthday");
+  var thisFestivity = self.hasClass("event--festivity");
+  var thisEvent = self.hasClass("event");
+  
+  switch (true) {
+    case thisImportant:
+      $(".c-aside__eventList").append(
+        "<p class='c-aside__event c-aside__event--important'>" +
+        thisName +
+        " <span> • " +
+        thisNotes +
+        "</span></p>"
+      );
+      break;
+    case thisBirthday:
+      $(".c-aside__eventList").append(
+        "<p class='c-aside__event c-aside__event--birthday'>" +
+        thisName +
+        " <span> • " +
+        thisNotes +
+        "</span></p>"
+      );
+      break;
+    case thisFestivity:
+      $(".c-aside__eventList").append(
+        "<p class='c-aside__event c-aside__event--festivity'>" +
+        thisName +
+        " <span> • " +
+        thisNotes +
+        "</span></p>"
+      );
+      break;
+    case thisEvent:
+      $(".c-aside__eventList").append(
+        "<p class='c-aside__event'>" +
+        thisName +
+        " <span> • " +
+        thisNotes +
+        "</span></p>"
+      );
+      break;
+   }
+};
+dataCel.on("click", function() {
+  var thisEl = $(this);
+  var thisDay = $(this)
+  .attr("data-day")
+  .slice(8);
+  var thisMonth = $(this)
+  .attr("data-day")
+  .slice(5, 7);
+
+  fillEventSidebar($(this));
+
+  $(".c-aside__num").text(thisDay);
+  $(".c-aside__month").text(monthText[thisMonth - 1]);
+
+  dataCel.removeClass("isSelected");
+  thisEl.addClass("isSelected");
+
+});
+
+//function for move the months
+function moveNext(fakeClick, indexNext) {
+  for (var i = 0; i < fakeClick; i++) {
+    $(".c-main").css({
+      left: "-=100%"
+    });
+    $(".c-paginator__month").css({
+      left: "-=100%"
+    });
+    switch (true) {
+      case indexNext:
+        indexMonth += 1;
+        break;
+    }
+  }
+}
+function movePrev(fakeClick, indexPrev) {
+  for (var i = 0; i < fakeClick; i++) {
+    $(".c-main").css({
+      left: "+=100%"
+    });
+    $(".c-paginator__month").css({
+      left: "+=100%"
+    });
+    switch (true) {
+      case indexPrev:
+        indexMonth -= 1;
+        break;
+    }
+  }
+}
+
+//months paginator
+function buttonsPaginator(buttonId, mainClass, monthClass, next, prev) {
+  switch (true) {
+    case next:
+      $(buttonId).on("click", function() {
+        if (indexMonth >= 2) {
+          $(mainClass).css({
+            left: "+=100%"
+          });
+          $(monthClass).css({
+            left: "+=100%"
+          });
+          indexMonth -= 1;
+        }
+        return indexMonth;
+      });
+      break;
+    case prev:
+      $(buttonId).on("click", function() {
+        if (indexMonth <= 11) {
+          $(mainClass).css({
+            left: "-=100%"
+          });
+          $(monthClass).css({
+            left: "-=100%"
+          });
+          indexMonth += 1;
+        }
+        return indexMonth;
+      });
+      break;
+  }
+}
+
+buttonsPaginator("#next", monthEl, ".c-paginator__month", false, true);
+buttonsPaginator("#prev", monthEl, ".c-paginator__month", true, false);
+
+//launch function to set the current month
+moveNext(indexMonth - 1, false);
+
+//fill the sidebar with current day
+$(".c-aside__num").text(day);
+$(".c-aside__month").text(monthText[month - 1]);

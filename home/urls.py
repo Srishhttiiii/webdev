@@ -11,12 +11,8 @@ urlpatterns = [
     path('therapy/', views.therapy, name ="therapy"),
     path('contact/', views.contact, name="contact"),
     path('blogs/', views.blogs, name="blogs"),
-    path('login/', views.login, name="login"),
-    path('signup/', views.signup, name="signup"),
+    path('rec/', views.rec, name="rec"),
+    # path('login/', views.login, name="login"),
+    # path('signup/', views.signup, name="signup"),
 
 ]
-#home
-#support- therapist meditation journaling timetable
-#blogs -
-#contact
-#login

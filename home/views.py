@@ -1,7 +1,7 @@
 from http.client import HTTPResponse
 from django.shortcuts import render
 from django.http import HttpResponse
-from .models import Blog
+from .models import Blog, Rec
 # Create your views here.
 def home(request):
     # try:
@@ -37,9 +37,17 @@ def blogs(request):
         context = {"blo":"Data not found"}
     return render(request,'blog.html',context)
 
+def rec(request):
+    try:
+        data = Rec.objects.all()
+        context = {"rec":data}
+    except Exception as e:
+        context = {"rec":"Data not found"}
+    return render(request,'rec.html',context)
 
-def login(request):
-    return render(request,'login.html')
 
-def signup(request):
-    return render(request,'signup.html')
+# def login(request):
+#     return render(request,'login.html')
+
+# def signup(request):
+#     return render(request,'signup.html')
