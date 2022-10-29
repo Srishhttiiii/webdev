@@ -1,7 +1,10 @@
 from http.client import HTTPResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
+from django.contrib import messages
+from .forms import RecForms, BlogForms
 from .models import Blog, Rec
+from django.contrib.auth.decorators import login_required
 # Create your views here.
 def home(request):
     # try:
@@ -46,8 +49,32 @@ def rec(request):
     return render(request,'rec.html',context)
 
 
-# def login(request):
-#     return render(request,'login.html')
+@login_required(login_url='loginPage')
+def recAdd(request):
+    form = RecForms()
+    if request.method == 'POST':
+        myData = RecForms(request.POST)
+        if myData.is_valid():
+            myData.save()
+            messages.success(request, 'Recommendation Added Successfully')
+            return redirect('rec')
+    context = {"form":form}
+    return render(request, 'recAdd.html', context)
 
-# def signup(request):
-#     return render(request,'signup.html')
+@login_required(login_url='loginPage')
+def recDelete(request, id):
+    data = Rec.objects.get(id=id)
+    data.delete()
+    messages.warning(request, 'Recommendation Deleted Successfully')
+    return redirect('rec')
+
+@login_required(login_url='loginPage')
+def recUpdate(request,id):
+    myData = Rec.objects.get(id=id)
+    updateForm = RecForms(request.POST or None, instance=myData)
+    if updateForm.is_valid():
+        updateForm.save()
+        messages.success(request, 'Recommendation Updated Successfully')
+        return redirect("rec")
+    context = {"form":updateForm} 
+    return render(request, 'recUpdate.html',context)

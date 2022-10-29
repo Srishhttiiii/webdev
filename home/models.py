@@ -1,5 +1,6 @@
 import email
 from email.policy import default
+from unittest.util import _MAX_LENGTH
 from django.db import models
 
 # Create your models here.
@@ -17,7 +18,8 @@ class Therapy(models.Model):
 
 class Blog(models.Model):
     name = models.CharField(max_length=100)
-    description = models.CharField(max_length=100)
+    description = models.CharField(max_length=500)
+    link = models.CharField(max_length=100, default='')
     
     def __str__(self):
          return self.name + ' ' + self.description
@@ -50,7 +52,8 @@ class Rec(models.Model):
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=100)
     genre = models.CharField(max_length=100 , default= '')
-    link = models.CharField(max_length=100)
+    platform = models.CharField(max_length=100)
+    link = models.CharField(max_length= 100, default='')
     
     def __str__(self):
          return self.name + ' ' + self.link
