@@ -3,10 +3,21 @@ from email.policy import default
 from unittest.util import _MAX_LENGTH
 from django.db import models
 
+#age,price,location,qualification
+
 # Create your models here.
 class Therapy(models.Model):
     name = models.CharField(max_length=100,null=True, blank=True)
     description = models.CharField(max_length=100,null=True,blank=True)
+    age = models.CharField(max_length=2,null=True,blank=True)
+    price = [
+      ('1k', 'Below 1000'),
+      ('1k-3k', '1000-3000'),
+      ('3k-5k', '3000-5000'),
+      ('5k', 'Above 5000'),
+   ]
+    choices = models.CharField(choices=price,null=True,blank=True,max_length=10)
+    location = models.CharField(max_length=100,null=True,blank=True)
 
 
     def __str__(self):
@@ -75,14 +86,12 @@ class Profile(models.Model):
 
 
 class Journaling(models.Model):
-    cmpname = models.CharField(max_length=100,null=True, blank=True)
-    position = models.CharField(max_length=100,null=True, blank=True)
-    shortdescription = models.CharField(max_length=100,null=True, blank=True)
-    updatedat = models.DateTimeField(auto_now=True)
-    createdat = models.DateTimeField(auto_now_add=True)
+    date = models.CharField(max_length=100,null=True, blank=True)
+    day = models.CharField(max_length=100,null=True, blank=True)
+    text = models.CharField(max_length=1000,null=True, blank=True)
 
     def __str__(self):
-        return self.cmpname + ' ' + self.position
+        return self.date + ' ' + self.day
     
     class Meta:
         verbose_name_plural = "Journaling"

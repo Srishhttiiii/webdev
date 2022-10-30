@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.contrib import messages
 from .forms import RecForms, BlogForms
-from .models import Blog, Rec
+from .models import Blog, Rec, Therapy
 from django.contrib.auth.decorators import login_required
 # Create your views here.
 def home(request):
@@ -27,7 +27,12 @@ def timetable(request):
     return render(request,'timetable.html')
 
 def therapy(request):
-    return render(request,'therapy.html')
+     try:
+        data = Therapy.objects.all()
+        context = {"the":data}
+     except Exception as e:
+        context = {"the":"Data not found"}
+     return render(request,'therapy.html',context)
 
 def contact(request):
     return render(request,'contact.html')
